@@ -136,10 +136,12 @@ def main() -> int:
     log.info("Snapshot suffix: %s", today)
     log.warning("Deleting snapshots older than date: %s", cutoff_date)
 
+    # Create a fresh snapshot after selecting older snapshots for deletion,
+    # but before actually deleting them.
     for dset in datasets:
-        create_snap(dset, dry_run)
         snap_list = get_all_snaps(dset, dry_run)
         old_snaps = filter_older_snaps(snap_list, cutoff_date)
+        create_snap(dset, dry_run)
         if old_snaps:
             remove_snaps(old_snaps, dry_run)
         else:
