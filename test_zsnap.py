@@ -1,21 +1,8 @@
 from datetime import date
-from importlib.machinery import SourceFileLoader
-from importlib.util import module_from_spec, spec_from_loader
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
 
-
-def _load_zsnap_module():
-    script_path = Path(__file__).with_name("zsnap")
-    loader = SourceFileLoader("zsnap_module", str(script_path))
-    spec = spec_from_loader(loader.name, loader)
-    module = module_from_spec(spec)
-    loader.exec_module(module)
-    return module
-
-
-zsnap = _load_zsnap_module()
+import zsnap
 
 
 def test_create_snap_calls_run_cmd_and_returns_snapshot(monkeypatch):
