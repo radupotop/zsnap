@@ -80,9 +80,9 @@ def test_remove_snaps_calls_run_cmd_for_each_snapshot(monkeypatch):
 
 
 def test_snapshot_workflow_loop_integration(monkeypatch):
+    cutoff_date = date(2026, 2, 10)
     fixed_today = date(2026, 2, 16)
     datasets = ("tank/alpha", "tank/beta")
-    cutoff_date = date(2026, 2, 10)
     dry_run = True
 
     def run_cmd_side_effect(zfscmd, dataset, dry_run):
@@ -94,6 +94,8 @@ def test_snapshot_workflow_loop_integration(monkeypatch):
                     stdout="\n".join(
                         [
                             "tank/alpha@2026-01-01",
+                            "tank/alpha@2026-01-20",
+                            "tank/alpha@2026-02-12",
                             "tank/alpha@2026-02-16",
                         ]
                     )
@@ -102,6 +104,7 @@ def test_snapshot_workflow_loop_integration(monkeypatch):
                 return SimpleNamespace(
                     stdout="\n".join(
                         [
+                            "tank/beta@2026-01-31",
                             "tank/beta@2026-02-12",
                             "tank/beta@2026-02-16",
                         ]
@@ -130,7 +133,9 @@ def test_snapshot_workflow_loop_integration(monkeypatch):
         call(zsnap.ZFS_TAKE_SNAP, "tank/alpha@2026-02-16", dry_run=True),
         call(zsnap.ZFS_LS_SNAP, "tank/alpha", dry_run=True),
         call(zsnap.ZFS_DESTROY, "tank/alpha@2026-01-01", dry_run=True),
+        call(zsnap.ZFS_DESTROY, "tank/alpha@2026-01-20", dry_run=True),
         call(zsnap.ZFS_TAKE_SNAP, "tank/beta@2026-02-16", dry_run=True),
         call(zsnap.ZFS_LS_SNAP, "tank/beta", dry_run=True),
+        call(zsnap.ZFS_DESTROY, "tank/beta@2026-01-31", dry_run=True),
     ]
-    assert call("No snapshots to remove") in info_mock.call_args_list
+    assert call("No snapshots to remove") not in info_mock.call_args_list
