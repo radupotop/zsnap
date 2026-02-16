@@ -2,9 +2,7 @@
 
 import argparse
 import logging
-import shutil
 import subprocess
-import sys
 from datetime import date, timedelta
 
 # ZFS commands
@@ -92,9 +90,14 @@ def run_cmd(zfscmd: tuple, dataset: str, dry_run: bool) -> subprocess.CompletedP
     )
 
 
+def has_zfs() -> bool:
+    rc = subprocess.run(("zfs", "version"), capture_output=True).returncode
+    return rc == 0
+
+
 def main() -> int:
-    if not shutil.which("zfs"):
-        print("Missing required command: zfs", file=sys.stderr)
+    if not has_zfs():
+        log.error("ZFS module not loaded")
         return 1
 
     parser = argparse.ArgumentParser(
