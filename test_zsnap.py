@@ -90,3 +90,60 @@ def test_remove_snaps_calls_run_cmd_for_each_snapshot(monkeypatch):
         call(zsnap.ZFS_DESTROY, "tank/data@2026-01-01", dry_run=True),
         call(zsnap.ZFS_DESTROY, "tank/data@2026-01-02", dry_run=True),
     ]
+
+
+def test_snapshot_workflow_loop_integration(monkeypatch):
+    fixed_today = date(2026, 2, 16)
+    datasets = ("tank/alpha", "tank/beta")
+    cutoff_date = date(2026, 2, 10)
+    dry_run = True
+
+    def run_cmd_side_effect(zfscmd, dataset, dry_run):
+        if zfscmd == zsnap.ZFS_TAKE_SNAP:
+            return SimpleNamespace(stdout="")
+        if zfscmd == zsnap.ZFS_LS_SNAP:
+            if dataset == "tank/alpha":
+                return SimpleNamespace(
+                    stdout="\n".join(
+                        [
+                            "tank/alpha@2026-01-01",
+                            "tank/alpha@2026-02-16",
+                        ]
+                    )
+                )
+            if dataset == "tank/beta":
+                return SimpleNamespace(
+                    stdout="\n".join(
+                        [
+                            "tank/beta@2026-02-12",
+                            "tank/beta@2026-02-16",
+                        ]
+                    )
+                )
+        if zfscmd == zsnap.ZFS_DESTROY:
+            return SimpleNamespace(stdout="")
+        raise AssertionError(f"Unexpected command: {zfscmd} {dataset}")
+
+    run_cmd_mock = MagicMock(side_effect=run_cmd_side_effect)
+    info_mock = MagicMock()
+    monkeypatch.setattr(zsnap, "today", fixed_today)
+    monkeypatch.setattr(zsnap, "run_cmd", run_cmd_mock)
+    monkeypatch.setattr(zsnap.log, "info", info_mock)
+
+    for dset in datasets:
+        zsnap.create_snap(dset, dry_run)
+        snap_list = zsnap.get_all_snaps(dset, dry_run)
+        old_snaps = zsnap.filter_older_snaps(snap_list, cutoff_date)
+        if old_snaps:
+            zsnap.remove_snaps(old_snaps, dry_run)
+        else:
+            zsnap.log.info("No snapshots to remove")
+
+    assert run_cmd_mock.call_args_list == [
+        call(zsnap.ZFS_TAKE_SNAP, "tank/alpha@2026-02-16", dry_run=True),
+        call(zsnap.ZFS_LS_SNAP, "tank/alpha", dry_run=True),
+        call(zsnap.ZFS_DESTROY, "tank/alpha@2026-01-01", dry_run=True),
+        call(zsnap.ZFS_TAKE_SNAP, "tank/beta@2026-02-16", dry_run=True),
+        call(zsnap.ZFS_LS_SNAP, "tank/beta", dry_run=True),
+    ]
+    assert call("No snapshots to remove") in info_mock.call_args_list
