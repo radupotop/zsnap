@@ -91,8 +91,11 @@ def run_cmd(zfscmd: tuple, dataset: str, dry_run: bool) -> subprocess.CompletedP
 
 
 def has_zfs() -> bool:
-    rc = subprocess.run(("zfs", "version"), capture_output=True).returncode
-    return rc == 0
+    try:
+        subprocess.run(("zfs", "version"), capture_output=True, check=True)
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return False
+    return True
 
 
 def main() -> int:
@@ -123,6 +126,10 @@ def main() -> int:
     args = parser.parse_args()
 
     datasets = tuple(map(str.strip, args.datasets.split(',')))
+    if not all(datasets):
+        log.error("Empty dataset name found")
+        return 1
+
     dry_run = bool(args.dry_run)
     cutoff_date = get_cutoff_date(int(args.retention_days))
 
