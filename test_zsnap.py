@@ -139,3 +139,35 @@ def test_snapshot_workflow_loop_integration(monkeypatch):
         call(zsnap.ZFS_DESTROY, "tank/beta@2026-01-31", dry_run=True),
     ]
     assert call("No snapshots to remove") not in info_mock.call_args_list
+
+
+def test_has_zfs_returns_false_when_binary_missing(monkeypatch):
+    run_mock = MagicMock(side_effect=FileNotFoundError)
+    monkeypatch.setattr(zsnap.subprocess, "run", run_mock)
+
+    result = zsnap.has_zfs()
+
+    assert result is False
+    run_mock.assert_called_once_with(("zfs", "version"), capture_output=True, check=True)
+
+
+def test_main_rejects_empty_dataset_entries(monkeypatch):
+    args = SimpleNamespace(
+        datasets="tank/alpha,,tank/beta",
+        retention_days=182,
+        dry_run=True,
+    )
+    parse_args_mock = MagicMock(return_value=args)
+    create_snap_mock = MagicMock()
+    error_mock = MagicMock()
+
+    monkeypatch.setattr(zsnap, "has_zfs", lambda: True)
+    monkeypatch.setattr(zsnap.argparse.ArgumentParser, "parse_args", parse_args_mock)
+    monkeypatch.setattr(zsnap, "create_snap", create_snap_mock)
+    monkeypatch.setattr(zsnap.log, "error", error_mock)
+
+    result = zsnap.main()
+
+    assert result == 1
+    create_snap_mock.assert_not_called()
+    error_mock.assert_called_once_with("Empty dataset name found")
