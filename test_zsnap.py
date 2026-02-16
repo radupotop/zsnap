@@ -153,7 +153,7 @@ def test_has_zfs_returns_false_when_binary_missing(monkeypatch):
 
 def test_main_rejects_empty_dataset_entries(monkeypatch):
     args = SimpleNamespace(
-        datasets="tank/alpha,,tank/beta",
+        datasets=["tank/alpha", ""],
         retention_days=182,
         dry_run=True,
     )
@@ -171,3 +171,36 @@ def test_main_rejects_empty_dataset_entries(monkeypatch):
     assert result == 1
     create_snap_mock.assert_not_called()
     error_mock.assert_called_once_with("Empty dataset name found")
+
+
+def test_main_accepts_datasets_provided_multiple_times(monkeypatch):
+    args = SimpleNamespace(
+        datasets=["tank/alpha", "tank/beta"],
+        retention_days=182,
+        dry_run=True,
+    )
+    parse_args_mock = MagicMock(return_value=args)
+    create_snap_mock = MagicMock()
+    get_all_snaps_mock = MagicMock(side_effect=[[], []])
+    filter_older_snaps_mock = MagicMock(side_effect=[[], []])
+    remove_snaps_mock = MagicMock()
+
+    monkeypatch.setattr(zsnap, "has_zfs", lambda: True)
+    monkeypatch.setattr(zsnap.argparse.ArgumentParser, "parse_args", parse_args_mock)
+    monkeypatch.setattr(zsnap, "create_snap", create_snap_mock)
+    monkeypatch.setattr(zsnap, "get_all_snaps", get_all_snaps_mock)
+    monkeypatch.setattr(zsnap, "filter_older_snaps", filter_older_snaps_mock)
+    monkeypatch.setattr(zsnap, "remove_snaps", remove_snaps_mock)
+
+    result = zsnap.main()
+
+    assert result == 0
+    assert create_snap_mock.call_args_list == [
+        call("tank/alpha", True),
+        call("tank/beta", True),
+    ]
+    assert get_all_snaps_mock.call_args_list == [
+        call("tank/alpha", True),
+        call("tank/beta", True),
+    ]
+    remove_snaps_mock.assert_not_called()

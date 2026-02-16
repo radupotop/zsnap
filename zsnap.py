@@ -108,8 +108,11 @@ def main() -> int:
     )
     parser.add_argument(
         "--datasets",
+        "-ds",
         type=str,
-        help="Comma separated values of datasets to snapshot",
+        action="extend",
+        nargs="+",
+        help="Datasets to snapshot; accepts multiple values and can be repeated",
         required=True,
     )
     parser.add_argument(
@@ -125,7 +128,9 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    datasets = tuple(map(str.strip, args.datasets.split(',')))
+    datasets = tuple(map(str.strip, args.datasets))
+    log.info("Processing datasets: %s", datasets)
+
     if not all(datasets):
         log.error("Empty dataset name found")
         return 1
@@ -136,7 +141,7 @@ def main() -> int:
     log.info("Snapshot suffix: %s", today)
     log.warning("Deleting snapshots older than date: %s", cutoff_date)
 
-    # Create a fresh snapshot after selecting older snapshots for deletion,
+    # Create a fresh snapshot only after selecting old snapshots for deletion,
     # but before actually deleting them.
     for dset in datasets:
         snap_list = get_all_snaps(dset, dry_run)
