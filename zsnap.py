@@ -18,7 +18,7 @@ today = date.today()
 
 # Logging
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
+log = logging.getLogger("zsnap")
 
 
 def get_cutoff_date(retention_days: int = 182) -> date:
@@ -129,7 +129,7 @@ def main() -> int:
     args = parser.parse_args()
 
     datasets = tuple(map(str.strip, args.datasets))
-    log.info("Processing datasets: %s", datasets)
+    log.info("Selected datasets: %s", datasets)
 
     if not all(datasets):
         log.error("Empty dataset name found")
@@ -138,8 +138,12 @@ def main() -> int:
     dry_run = bool(args.dry_run)
     cutoff_date = get_cutoff_date(int(args.retention_days))
 
-    log.info("Snapshot suffix: %s", today)
-    log.warning("Deleting snapshots older than date: %s", cutoff_date)
+    log.info("Fresh snapshot suffix: %s", today)
+    log.warning(
+        "Deleting snapshots older than: %s (%s days ago)",
+        cutoff_date,
+        args.retention_days,
+    )
 
     # Create a fresh snapshot only after selecting old snapshots for deletion,
     # but before actually deleting them.
