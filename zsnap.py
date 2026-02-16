@@ -104,6 +104,7 @@ def main() -> int:
         "--datasets",
         type=str,
         help="Comma separated values of datasets to snapshot",
+        required=True,
     )
     parser.add_argument(
         "--retention-days",
