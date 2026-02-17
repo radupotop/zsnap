@@ -45,9 +45,11 @@ def get_all_snaps(dataset: str, dry_run=False) -> list[T_SNAP]:
         dry_run=dry_run,
     ).stdout.splitlines()
 
-    parsed = filter(None, (parse_snap_name(snap) for snap in snapshot_names))
+    parsed = sorted(
+        filter(None, (parse_snap_name(snap) for snap in snapshot_names)),
+    )
     log.info("All snapshots for dataset %s: %s", dataset, parsed)
-    return sorted(parsed)
+    return parsed
 
 
 def filter_older_snaps(snap_list: list[T_SNAP], cutoff_date: date) -> list[T_SNAP]:
