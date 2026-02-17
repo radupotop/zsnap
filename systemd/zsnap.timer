@@ -2,7 +2,7 @@
 Description=Run zsnap.py weekly
 
 [Timer]
-OnCalendar=weekly
+OnCalendar=Wed *-*-* 03:00:00
 Persistent=true
 Unit=zsnap.service
 
