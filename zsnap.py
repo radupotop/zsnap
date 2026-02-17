@@ -6,6 +6,7 @@ import subprocess
 from datetime import date, timedelta
 
 # ZFS commands
+ZFS_GET_DATASET = ("zfs", "list", "-H", "-t", "filesystem", "-o", "name")
 ZFS_LS_SNAP = ("zfs", "list", "-H", "-t", "snapshot", "-o", "name", "-s", "creation")
 ZFS_TAKE_SNAP = ("zfs", "snapshot")
 ZFS_DESTROY = ("zfs", "destroy", "-n")
@@ -37,11 +38,23 @@ def parse_snap_name(snap: str) -> T_SNAP | None:
         log.warning('Could not parse snapshot: %s', snap)
 
 
+def has_dataset(dataset: str, dry_run=False) -> bool:
+    try:
+        run_cmd(
+            ZFS_GET_DATASET,
+            dataset.strip(),
+            dry_run=dry_run,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return False
+    return True
+
+
 def get_all_snaps(dataset: str, dry_run=False) -> list[T_SNAP]:
     try:
         snapshot_names: list[str] = run_cmd(
             ZFS_LS_SNAP,
-            dataset,
+            dataset.strip(),
             dry_run=dry_run,
         ).stdout.splitlines()
     except (FileNotFoundError, subprocess.SubprocessError) as err:
@@ -74,7 +87,7 @@ def remove_snaps(snap_list: list[T_SNAP], dry_run=False):
 
 
 def create_snap(dataset: str, dry_run=False) -> T_SNAP:
-    new_snap_name = dataset + "@" + today.isoformat()
+    new_snap_name = dataset.strip() + "@" + today.isoformat()
     log.info("Taking snapshot: %s", new_snap_name)
     try:
         run_cmd(
@@ -146,6 +159,11 @@ def main():
     if not all(datasets):
         log.error("Empty dataset name found")
         raise SystemExit(1)
+
+    for ds in datasets:
+        if not has_dataset(ds):
+            log.error("Dataset not found: %s", ds)
+            raise SystemExit(1)
 
     dry_run = bool(args.dry_run)
     cutoff_date = get_cutoff_date(int(args.retention_days))
