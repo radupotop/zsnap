@@ -38,6 +38,7 @@ def parse_snap_name(snap: str) -> T_SNAP | None:
 
 
 def get_all_snaps(dataset: str, dry_run=False) -> list[T_SNAP]:
+    # No error handling here; if it fails let it fail loudly
     snapshot_names: list[str] = run_cmd(
         ZFS_LS_SNAP,
         dataset,
@@ -55,24 +56,28 @@ def filter_older_snaps(snap_list: list[T_SNAP], cutoff_date: date) -> list[T_SNA
 
 def remove_snaps(snap_list: list[T_SNAP], dry_run=False):
     log.warning("Removing snapshots: %s", snap_list)
-    return [
-        run_cmd(
-            ZFS_DESTROY,
-            snap[1],
-            dry_run=dry_run,
-        )
-        for snap in snap_list
-    ]
+    for snap in snap_list:
+        try:
+            run_cmd(
+                ZFS_DESTROY,
+                snap[1],
+                dry_run=dry_run,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError) as err:
+            log.error("Could not destroy snapshot: %s, Error: %s", snap[1], err)
 
 
 def create_snap(dataset: str, dry_run=False) -> T_SNAP:
     new_snap_name = dataset + "@" + today.isoformat()
     log.info("Taking snapshot: %s", new_snap_name)
-    run_cmd(
-        ZFS_TAKE_SNAP,
-        new_snap_name,
-        dry_run=dry_run,
-    )
+    try:
+        run_cmd(
+            ZFS_TAKE_SNAP,
+            new_snap_name,
+            dry_run=dry_run,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as err:
+        log.error("Could not create snapshot: %s, Error: %s", new_snap_name, err)
     return (today, new_snap_name)
 
 
