@@ -2,6 +2,7 @@ from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, call
 
+import pytest
 import zsnap
 
 
@@ -66,13 +67,12 @@ def test_remove_snaps_calls_run_cmd_for_each_snapshot(monkeypatch):
         (date(2026, 1, 1), "tank/data@2026-01-01"),
         (date(2026, 1, 2), "tank/data@2026-01-02"),
     ]
-    run_results = [object(), object()]
-    run_cmd_mock = MagicMock(side_effect=run_results)
+    run_cmd_mock = MagicMock(side_effect=[object(), object()])
     monkeypatch.setattr(zsnap, "run_cmd", run_cmd_mock)
 
     result = zsnap.remove_snaps(snaps, dry_run=True)
 
-    assert result == run_results
+    assert result is None
     assert run_cmd_mock.call_args_list == [
         call(zsnap.ZFS_DESTROY, "tank/data@2026-01-01", dry_run=True),
         call(zsnap.ZFS_DESTROY, "tank/data@2026-01-02", dry_run=True),
@@ -151,6 +151,21 @@ def test_has_zfs_returns_false_when_binary_missing(monkeypatch):
     run_mock.assert_called_once_with(("zfs", "version"), capture_output=True, check=True)
 
 
+def test_has_dataset_returns_true_and_calls_run_cmd(monkeypatch):
+    run_cmd_mock = MagicMock(return_value=SimpleNamespace(stdout=""))
+    monkeypatch.setattr(zsnap, "run_cmd", run_cmd_mock)
+
+    dataset = "tank/data"
+    result = zsnap.has_dataset(dataset)
+
+    assert result is True
+    run_cmd_mock.assert_called_once_with(
+        zsnap.ZFS_GET_DATASET,
+        "tank/data",
+        dry_run=False,
+    )
+
+
 def test_main_rejects_empty_dataset_entries(monkeypatch):
     args = SimpleNamespace(
         datasets=["tank/alpha", ""],
@@ -166,9 +181,10 @@ def test_main_rejects_empty_dataset_entries(monkeypatch):
     monkeypatch.setattr(zsnap, "create_snap", create_snap_mock)
     monkeypatch.setattr(zsnap.log, "error", error_mock)
 
-    result = zsnap.main()
+    with pytest.raises(SystemExit) as exc:
+        zsnap.main()
 
-    assert result == 1
+    assert exc.value.code == 1
     create_snap_mock.assert_not_called()
     error_mock.assert_called_once_with("Empty dataset name found")
 
@@ -184,8 +200,10 @@ def test_main_accepts_datasets_provided_multiple_times(monkeypatch):
     get_all_snaps_mock = MagicMock(side_effect=[[], []])
     filter_older_snaps_mock = MagicMock(side_effect=[[], []])
     remove_snaps_mock = MagicMock()
+    has_dataset_mock = MagicMock(return_value=True)
 
     monkeypatch.setattr(zsnap, "has_zfs", lambda: True)
+    monkeypatch.setattr(zsnap, "has_dataset", has_dataset_mock)
     monkeypatch.setattr(zsnap.argparse.ArgumentParser, "parse_args", parse_args_mock)
     monkeypatch.setattr(zsnap, "create_snap", create_snap_mock)
     monkeypatch.setattr(zsnap, "get_all_snaps", get_all_snaps_mock)
@@ -194,7 +212,11 @@ def test_main_accepts_datasets_provided_multiple_times(monkeypatch):
 
     result = zsnap.main()
 
-    assert result == 0
+    assert result is None
+    assert has_dataset_mock.call_args_list == [
+        call("tank/alpha"),
+        call("tank/beta"),
+    ]
     assert create_snap_mock.call_args_list == [
         call("tank/alpha", True),
         call("tank/beta", True),
