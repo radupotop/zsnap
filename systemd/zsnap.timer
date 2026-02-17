@@ -1,0 +1,10 @@
+[Unit]
+Description=Run zsnap.py weekly
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+Unit=zsnap.service
+
+[Install]
+WantedBy=timers.target

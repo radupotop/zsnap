@@ -1,0 +1,13 @@
+[Unit]
+Description=Create and prune ZFS snapshots with zsnap.py
+Wants=zfs.target
+After=zfs.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/home/radu/Projects/zsnap
+Environment=ZSNAP_RETENTION_DAYS=182
+EnvironmentFile=/etc/zsnap.env
+ExecStart=/usr/bin/python3 /home/radu/Projects/zsnap/zsnap.py --datasets $ZSNAP_DATASETS --retention-days $ZSNAP_RETENTION_DAYS
