@@ -8,7 +8,7 @@ from datetime import date, timedelta
 # ZFS commands
 ZFS_LS_SNAP = ("zfs", "list", "-H", "-t", "snapshot", "-o", "name", "-s", "creation")
 ZFS_TAKE_SNAP = ("zfs", "snapshot")
-ZFS_DESTROY = ("zfs", "destroy")
+ZFS_DESTROY = ("zfs", "destroy", "-n")
 
 # Types
 T_SNAP = tuple[date, str]
