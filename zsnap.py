@@ -38,12 +38,15 @@ def parse_snap_name(snap: str) -> T_SNAP | None:
 
 
 def get_all_snaps(dataset: str, dry_run=False) -> list[T_SNAP]:
-    # No error handling here; if it fails let it fail loudly
-    snapshot_names: list[str] = run_cmd(
-        ZFS_LS_SNAP,
-        dataset,
-        dry_run=dry_run,
-    ).stdout.splitlines()
+    try:
+        snapshot_names: list[str] = run_cmd(
+            ZFS_LS_SNAP,
+            dataset,
+            dry_run=dry_run,
+        ).stdout.splitlines()
+    except (FileNotFoundError, subprocess.SubprocessError) as err:
+        log.error("Could not list snapshots for dataset: %s", dataset)
+        raise SystemExit(err)
 
     parsed = sorted(
         filter(None, (parse_snap_name(snap) for snap in snapshot_names)),
@@ -66,7 +69,8 @@ def remove_snaps(snap_list: list[T_SNAP], dry_run=False):
                 dry_run=dry_run,
             )
         except (FileNotFoundError, subprocess.SubprocessError) as err:
-            log.error("Could not destroy snapshot: %s, Error: %s", snap[1], err)
+            log.error("Could not destroy snapshot: %s", snap[1])
+            raise SystemExit(err)
 
 
 def create_snap(dataset: str, dry_run=False) -> T_SNAP:
@@ -79,7 +83,8 @@ def create_snap(dataset: str, dry_run=False) -> T_SNAP:
             dry_run=dry_run,
         )
     except (FileNotFoundError, subprocess.SubprocessError) as err:
-        log.error("Could not create snapshot: %s, Error: %s", new_snap_name, err)
+        log.error("Could not create snapshot: %s", new_snap_name)
+        raise SystemExit(err)
     return (today, new_snap_name)
 
 
@@ -105,10 +110,10 @@ def has_zfs() -> bool:
     return True
 
 
-def main() -> int:
+def main():
     if not has_zfs():
         log.error("ZFS module not loaded")
-        return 1
+        raise SystemExit(1)
 
     parser = argparse.ArgumentParser(
         description="Create ZFS snapshot and prune old snapshots"
@@ -140,7 +145,7 @@ def main() -> int:
 
     if not all(datasets):
         log.error("Empty dataset name found")
-        return 1
+        raise SystemExit(1)
 
     dry_run = bool(args.dry_run)
     cutoff_date = get_cutoff_date(int(args.retention_days))
@@ -163,8 +168,6 @@ def main() -> int:
         else:
             log.info("No snapshots to remove")
 
-    return 0
-
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
