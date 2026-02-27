@@ -4,6 +4,7 @@ import argparse
 import logging
 import subprocess
 from datetime import date, timedelta
+from typing import TypeAlias
 
 # ZFS commands
 ZFS_GET_DATASET = ("zfs", "list", "-H", "-t", "filesystem", "-o", "name")
@@ -12,7 +13,7 @@ ZFS_TAKE_SNAP = ("zfs", "snapshot")
 ZFS_DESTROY = ("zfs", "destroy", "-n")
 
 # Types
-T_SNAP = tuple[date, str]
+T_SNAP: TypeAlias = tuple[date, str]
 
 # Predefined vars
 today = date.today()
