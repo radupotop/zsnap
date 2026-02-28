@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-
 import argparse
 import logging
 import subprocess
 from datetime import date, timedelta
+from typing import NamedTuple
 
 # ZFS commands
 HAS_ZFS = ("zfs", "version")
@@ -12,10 +12,7 @@ ZFS_LS_SNAP = ("zfs", "list", "-H", "-t", "snapshot", "-o", "name", "-s", "creat
 ZFS_TAKE_SNAP = ("zfs", "snapshot")
 ZFS_DESTROY = ("zfs", "destroy", "-n")
 
-# Types
-type T_SNAP = tuple[date, str]
-
-# Predefined vars
+# Const
 today = date.today()
 
 # Logging
@@ -23,18 +20,24 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("zsnap")
 
 
+# Types
+class Z_SNAP(NamedTuple):
+    ts: date
+    name: str
+
+
 def get_cutoff_date(retention_days: int = 182) -> date:
     return today - timedelta(days=abs(retention_days))
 
 
-def parse_snap_name(snap: str) -> T_SNAP | None:
+def parse_snap_name(snap: str) -> Z_SNAP | None:
     """
     Parse a single snapshot name
     """
     try:
         _, _date_iso = snap.split('@', 1)
         parsed_date = date.fromisoformat(_date_iso)
-        return (parsed_date, snap)
+        return Z_SNAP(parsed_date, snap)
     except ValueError:
         log.warning('Could not parse snapshot - skipping: %s', snap)
 
@@ -51,7 +54,7 @@ def has_dataset(dataset: str, dry_run=False) -> bool:
     return True
 
 
-def get_all_snaps(dataset: str, dry_run=False) -> list[T_SNAP]:
+def get_all_snaps(dataset: str, dry_run=False) -> list[Z_SNAP]:
     try:
         snapshot_names: list[str] = run_cmd(
             ZFS_LS_SNAP,
@@ -69,11 +72,11 @@ def get_all_snaps(dataset: str, dry_run=False) -> list[T_SNAP]:
     return parsed
 
 
-def filter_older_snaps(snap_list: list[T_SNAP], cutoff_date: date) -> list[T_SNAP]:
+def filter_older_snaps(snap_list: list[Z_SNAP], cutoff_date: date) -> list[Z_SNAP]:
     return list(filter(lambda d: d[0] < cutoff_date, snap_list))
 
 
-def remove_snaps(snap_list: list[T_SNAP], dry_run=False):
+def remove_snaps(snap_list: list[Z_SNAP], dry_run=False):
     log.warning("Removing %s snapshots: %s", len(snap_list), snap_list)
     for snap in snap_list:
         try:
@@ -87,7 +90,7 @@ def remove_snaps(snap_list: list[T_SNAP], dry_run=False):
             raise SystemExit(err)
 
 
-def create_snap(dataset: str, dry_run=False) -> T_SNAP:
+def create_snap(dataset: str, dry_run=False) -> Z_SNAP:
     new_snap_name = dataset.strip() + "@" + today.isoformat()
     log.info("Taking snapshot: %s", new_snap_name)
     try:
@@ -99,7 +102,7 @@ def create_snap(dataset: str, dry_run=False) -> T_SNAP:
     except (FileNotFoundError, subprocess.SubprocessError) as err:
         log.error("Could not create snapshot: %s", new_snap_name)
         raise SystemExit(err)
-    return (today, new_snap_name)
+    return Z_SNAP(today, new_snap_name)
 
 
 def run_cmd(zfscmd: tuple, dataset: str, dry_run: bool) -> subprocess.CompletedProcess:
