@@ -36,7 +36,7 @@ def parse_snap_name(snap: str) -> T_SNAP | None:
         parsed_date = date.fromisoformat(_date_iso)
         return (parsed_date, snap)
     except ValueError:
-        log.warning('Could not parse snapshot: %s', snap)
+        log.warning('Could not parse snapshot - skipping: %s', snap)
 
 
 def has_dataset(dataset: str, dry_run=False) -> bool:
@@ -103,7 +103,7 @@ def create_snap(dataset: str, dry_run=False) -> T_SNAP:
 
 
 def run_cmd(zfscmd: tuple, dataset: str, dry_run: bool) -> subprocess.CompletedProcess:
-    log.info("Running cmd %s %s", zfscmd, dataset)
+    log.info("Running cmd %s %s", " ".join(zfscmd), dataset)
     if dry_run:
         log.info("DRY RUN")
         return subprocess.CompletedProcess("", 0, stdout="")
@@ -170,11 +170,6 @@ def main():
     cutoff_date = get_cutoff_date(int(args.retention_days))
 
     log.info("Fresh snapshot suffix: %s", today)
-    log.warning(
-        "Deleting snapshots older than: %s (%s days ago)",
-        cutoff_date,
-        args.retention_days,
-    )
 
     # Create a fresh snapshot only after selecting old snapshots for deletion,
     # but before actually deleting them.
@@ -183,6 +178,11 @@ def main():
         old_snaps = filter_older_snaps(snap_list, cutoff_date)
         create_snap(dset, dry_run)
         if old_snaps:
+            log.warning(
+                "Deleting snapshots older than: %s (%s days ago)",
+                cutoff_date,
+                args.retention_days,
+            )
             remove_snaps(old_snaps, dry_run)
         else:
             log.info("No snapshots to remove")
