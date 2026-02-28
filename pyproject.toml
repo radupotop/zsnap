@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ZSnap"
+version = "0.8"
+description = "Create ZFS snapshot and prune old snapshots"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+tests = []
+
+[tool.setuptools.packages.find]
+where = ["."]
