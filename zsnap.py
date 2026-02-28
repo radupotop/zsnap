@@ -4,7 +4,6 @@ import argparse
 import logging
 import subprocess
 from datetime import date, timedelta
-from typing import TypeAlias
 
 # ZFS commands
 ZFS_GET_DATASET = ("zfs", "list", "-H", "-t", "filesystem", "-o", "name")
@@ -13,7 +12,7 @@ ZFS_TAKE_SNAP = ("zfs", "snapshot")
 ZFS_DESTROY = ("zfs", "destroy", "-n")
 
 # Types
-T_SNAP: TypeAlias = tuple[date, str]
+type T_SNAP = tuple[date, str]
 
 # Predefined vars
 today = date.today()
@@ -74,7 +73,7 @@ def filter_older_snaps(snap_list: list[T_SNAP], cutoff_date: date) -> list[T_SNA
 
 
 def remove_snaps(snap_list: list[T_SNAP], dry_run=False):
-    log.warning("Removing snapshots: %s", snap_list)
+    log.warning("Removing %s snapshots: %s", len(snap_list), snap_list)
     for snap in snap_list:
         try:
             run_cmd(
@@ -103,7 +102,7 @@ def create_snap(dataset: str, dry_run=False) -> T_SNAP:
 
 
 def run_cmd(zfscmd: tuple, dataset: str, dry_run: bool) -> subprocess.CompletedProcess:
-    log.info("Running cmd %s %s", " ".join(zfscmd), dataset)
+    log.info("Running cmd: %s %s", " ".join(zfscmd), dataset)
     if dry_run:
         log.info("DRY RUN")
         return subprocess.CompletedProcess("", 0, stdout="")
