@@ -6,6 +6,7 @@ import subprocess
 from datetime import date, timedelta
 
 # ZFS commands
+HAS_ZFS = ("zfs", "version")
 ZFS_GET_DATASET = ("zfs", "list", "-H", "-t", "filesystem", "-o", "name")
 ZFS_LS_SNAP = ("zfs", "list", "-H", "-t", "snapshot", "-o", "name", "-s", "creation")
 ZFS_TAKE_SNAP = ("zfs", "snapshot")
@@ -117,7 +118,7 @@ def run_cmd(zfscmd: tuple, dataset: str, dry_run: bool) -> subprocess.CompletedP
 
 def has_zfs() -> bool:
     try:
-        subprocess.run(("zfs", "version"), capture_output=True, check=True)
+        subprocess.run(HAS_ZFS, capture_output=True, check=True)
     except (FileNotFoundError, subprocess.SubprocessError):
         return False
     return True
