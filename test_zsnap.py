@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 import zsnap
+from zsnap import Z_SNAP
 
 
 def test_create_snap_calls_run_cmd_and_returns_snapshot(monkeypatch):
@@ -39,8 +40,8 @@ def test_get_all_snaps_parses_filters_and_sorts(monkeypatch):
     result = zsnap.get_all_snaps("tank/data", dry_run=False)
 
     assert result == [
-        (date(2026, 2, 1), "tank/data@2026-02-01"),
-        (date(2026, 2, 10), "tank/data@2026-02-10"),
+        Z_SNAP(date(2026, 2, 1), "tank/data@2026-02-01"),
+        Z_SNAP(date(2026, 2, 10), "tank/data@2026-02-10"),
     ]
     run_cmd_mock.assert_called_once_with(
         zsnap.ZFS_LS_SNAP,
@@ -51,9 +52,9 @@ def test_get_all_snaps_parses_filters_and_sorts(monkeypatch):
 
 def test_filter_older_snaps_returns_only_dates_before_cutoff():
     snaps = [
-        (date(2026, 1, 1), "tank/data@2026-01-01"),
-        (date(2026, 2, 10), "tank/data@2026-02-10"),
-        (date(2026, 2, 20), "tank/data@2026-02-20"),
+        Z_SNAP(date(2026, 1, 1), "tank/data@2026-01-01"),
+        Z_SNAP(date(2026, 2, 10), "tank/data@2026-02-10"),
+        Z_SNAP(date(2026, 2, 20), "tank/data@2026-02-20"),
     ]
     cutoff = date(2026, 2, 10)
 
@@ -64,8 +65,8 @@ def test_filter_older_snaps_returns_only_dates_before_cutoff():
 
 def test_remove_snaps_calls_run_cmd_for_each_snapshot(monkeypatch):
     snaps = [
-        (date(2026, 1, 1), "tank/data@2026-01-01"),
-        (date(2026, 1, 2), "tank/data@2026-01-02"),
+        Z_SNAP(date(2026, 1, 1), "tank/data@2026-01-01"),
+        Z_SNAP(date(2026, 1, 2), "tank/data@2026-01-02"),
     ]
     run_cmd_mock = MagicMock(side_effect=[object(), object()])
     monkeypatch.setattr(zsnap, "run_cmd", run_cmd_mock)
