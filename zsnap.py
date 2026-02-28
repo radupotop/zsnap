@@ -73,7 +73,7 @@ def get_all_snaps(dataset: str, dry_run=False) -> list[Z_SNAP]:
 
 
 def filter_older_snaps(snap_list: list[Z_SNAP], cutoff_date: date) -> list[Z_SNAP]:
-    return list(filter(lambda d: d[0] < cutoff_date, snap_list))
+    return list(filter(lambda zs: zs.ts < cutoff_date, snap_list))
 
 
 def remove_snaps(snap_list: list[Z_SNAP], dry_run=False):
@@ -82,11 +82,11 @@ def remove_snaps(snap_list: list[Z_SNAP], dry_run=False):
         try:
             run_cmd(
                 ZFS_DESTROY,
-                snap[1],
+                snap.name,
                 dry_run=dry_run,
             )
         except (FileNotFoundError, subprocess.SubprocessError) as err:
-            log.error("Could not destroy snapshot: %s", snap[1])
+            log.error("Could not destroy snapshot: %s", snap.name)
             raise SystemExit(err)
 
 
