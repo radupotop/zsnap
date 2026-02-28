@@ -172,7 +172,7 @@ def main():
     dry_run = bool(args.dry_run)
     cutoff_date = get_cutoff_date(int(args.retention_days))
 
-    log.info("Fresh snapshot suffix: %s", today)
+    log.info("Using snapshot suffix: %s", today)
 
     # Create a fresh snapshot only after selecting old snapshots for deletion,
     # but before actually deleting them.
